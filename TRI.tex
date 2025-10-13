@@ -1,0 +1,1232 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb, amsfonts, amsthm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{quantikz}
+
+\geometry{margin=2.5cm}
+
+\lstset{
+  backgroundcolor=\color{gray!10},
+  basicstyle=\ttfamily\footnotesize,
+  frame=single,
+  breaklines=true,
+  captionpos=b,
+  commentstyle=\color{green!60!black},
+  keywordstyle=\color{blue},
+  stringstyle=\color{red}
+}
+
+% Théorèmes et définitions
+\newtheorem{theorem}{Théorème}[section]
+\newtheorem{lemma}[theorem]{Lemme}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollaire}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Définition}
+\newtheorem{example}[theorem]{Exemple}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remarque}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\Huge\bfseries Introduction à l'informatique quantique\par}
+\vspace{1cm}
+{\LARGE Mise en œuvre d'algorithmes de recherche et d'optimisation\par}
+\vspace{2cm}
+{\Large Arthur Debauge\par}
+\vspace{0.5cm}
+{\large Octobre 2025\par}
+\vfill
+{\large HES-SO HEPIA -- Département ISC\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===========================
+\section{Rappels mathématiques fondamentaux}
+
+L'informatique quantique repose sur des structures mathématiques rigoureuses issues de l'analyse fonctionnelle et de l'algèbre linéaire. Cette section pose les fondations nécessaires à la compréhension des algorithmes quantiques.
+
+\subsection{Espaces de Hilbert et postulats de la mécanique quantique}
+
+\begin{definition}[Espace de Hilbert]
+Un \textbf{espace de Hilbert} $\mathcal{H}$ est un espace vectoriel complexe muni d'un produit scalaire hermitien $\langle \cdot | \cdot \rangle : \mathcal{H} \times \mathcal{H} \to \mathbb{C}$ et complet pour la norme induite $\|\psi\| = \sqrt{\langle \psi | \psi \rangle}$.
+\end{definition}
+
+\begin{remark}
+La complétude signifie que toute suite de Cauchy dans $\mathcal{H}$ converge vers un élément de $\mathcal{H}$. Cette propriété garantit la cohérence mathématique des opérations en mécanique quantique.
+\end{remark}
+
+\begin{definition}[Produit scalaire hermitien]
+Le produit scalaire $\langle \cdot | \cdot \rangle$ vérifie pour tous $|\psi\rangle, |\phi\rangle, |\chi\rangle \in \mathcal{H}$ et $\alpha, \beta \in \mathbb{C}$ :
+\begin{enumerate}
+    \item \textbf{Linéarité à droite :} $\langle \psi | \alpha\phi + \beta\chi \rangle = \alpha\langle \psi | \phi \rangle + \beta\langle \psi | \chi \rangle$
+    \item \textbf{Symétrie hermitienne :} $\langle \psi | \phi \rangle = \overline{\langle \phi | \psi \rangle}$
+    \item \textbf{Positivité :} $\langle \psi | \psi \rangle \geq 0$ avec égalité si et seulement si $|\psi\rangle = 0$
+\end{enumerate}
+\end{definition}
+
+\subsection{Le qubit : unité élémentaire de l'information quantique}
+
+\begin{definition}[Qubit]
+Un \textbf{qubit} (quantum bit) est un système quantique à deux niveaux dont l'espace d'états est $\mathcal{H} = \mathbb{C}^2$. Il est décrit par un vecteur normalisé :
+\[
+|\psi\rangle = \alpha|0\rangle + \beta|1\rangle, \qquad \alpha, \beta \in \mathbb{C}, \quad |\alpha|^2 + |\beta|^2 = 1
+\]
+où $\{|0\rangle, |1\rangle\}$ forme une base orthonormale appelée \textbf{base computationnelle}.
+\end{definition}
+
+\paragraph{Représentation matricielle :}
+\[
+|0\rangle = \begin{pmatrix} 1 \\ 0 \end{pmatrix}, \qquad |1\rangle = \begin{pmatrix} 0 \\ 1 \end{pmatrix}, \qquad |\psi\rangle = \begin{pmatrix} \alpha \\ \beta \end{pmatrix}
+\]
+
+\begin{example}[États fondamentaux]
+Quelques états remarquables :
+\begin{itemize}
+    \item $|+\rangle = \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)$ : superposition équilibrée positive
+    \item $|-\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$ : superposition équilibrée négative
+    \item $|i\rangle = \frac{1}{\sqrt{2}}(|0\rangle + i|1\rangle)$ : superposition avec phase complexe
+\end{itemize}
+\end{example}
+
+\subsection{Notation de Dirac (bra-ket)}
+
+\begin{definition}[Notation bra-ket]
+\begin{itemize}
+    \item Un \textbf{ket} $|\psi\rangle$ désigne un vecteur colonne de $\mathcal{H}$
+    \item Un \textbf{bra} $\langle\psi|$ désigne le vecteur dual (ligne), transposé conjugué de $|\psi\rangle$ : $\langle\psi| = (|\psi\rangle)^\dagger$
+    \item Le \textbf{bracket} $\langle\phi|\psi\rangle$ est le produit scalaire entre $|\phi\rangle$ et $|\psi\rangle$
+\end{itemize}
+\end{definition}
+
+\paragraph{Opérations fondamentales :}
+\begin{align}
+\langle\psi| &= (\alpha^* \quad \beta^*) \quad \text{(transposé conjugué)} \\
+\langle\phi|\psi\rangle &= \alpha^*\gamma + \beta^*\delta \quad \text{si } |\phi\rangle = \alpha|0\rangle + \beta|1\rangle, \; |\psi\rangle = \gamma|0\rangle + \delta|1\rangle \\
+|\psi\rangle\langle\phi| &= \text{opérateur de projection (matrice } 2\times 2\text{)}
+\end{align}
+
+\subsection{Produit tensoriel et systèmes composés}
+
+\begin{definition}[Produit tensoriel]
+Le produit tensoriel $\otimes$ permet de construire l'espace d'états d'un système composite. Pour deux espaces $\mathcal{H}_1$ et $\mathcal{H}_2$, l'espace produit est :
+\[
+\mathcal{H}_1 \otimes \mathcal{H}_2 = \left\{ \sum_i c_i |\psi_i\rangle \otimes |\phi_i\rangle \;\Big|\; |\psi_i\rangle \in \mathcal{H}_1, \; |\phi_i\rangle \in \mathcal{H}_2, \; c_i \in \mathbb{C} \right\}
+\]
+\end{definition}
+
+\begin{proposition}[Dimension de l'espace tensoriel]
+Si $\dim(\mathcal{H}_1) = d_1$ et $\dim(\mathcal{H}_2) = d_2$, alors :
+\[
+\dim(\mathcal{H}_1 \otimes \mathcal{H}_2) = d_1 \cdot d_2
+\]
+\end{proposition}
+
+\begin{proof}
+Soit $\{|e_i\rangle\}_{i=1}^{d_1}$ une base de $\mathcal{H}_1$ et $\{|f_j\rangle\}_{j=1}^{d_2}$ une base de $\mathcal{H}_2$. Les vecteurs $\{|e_i\rangle \otimes |f_j\rangle\}_{i,j}$ forment une base de $\mathcal{H}_1 \otimes \mathcal{H}_2$, au nombre de $d_1 \times d_2$.
+\end{proof}
+
+\begin{corollary}[Registre de $n$ qubits]
+Pour $n$ qubits, l'espace d'états est :
+\[
+\mathcal{H}_n = \underbrace{\mathbb{C}^2 \otimes \mathbb{C}^2 \otimes \cdots \otimes \mathbb{C}^2}_{n \text{ fois}} = \mathbb{C}^{2^n}
+\]
+de dimension $2^n$, avec base $\{|x\rangle\}_{x=0}^{2^n-1}$ où $x$ est l'écriture binaire : $|x\rangle = |x_{n-1}\rangle \otimes \cdots \otimes |x_0\rangle$.
+\end{corollary}
+
+\paragraph{Notation compacte :}
+Pour éviter de surcharger les formules, on note souvent :
+\[
+|x_1 x_2 \cdots x_n\rangle \equiv |x_1\rangle \otimes |x_2\rangle \otimes \cdots \otimes |x_n\rangle
+\]
+
+\begin{example}[Système de 2 qubits]
+L'espace $\mathbb{C}^2 \otimes \mathbb{C}^2 = \mathbb{C}^4$ a pour base :
+\[
+\{|00\rangle, |01\rangle, |10\rangle, |11\rangle\}
+\]
+Un état général s'écrit :
+\[
+|\psi\rangle = \alpha_{00}|00\rangle + \alpha_{01}|01\rangle + \alpha_{10}|10\rangle + \alpha_{11}|11\rangle
+\]
+avec $|\alpha_{00}|^2 + |\alpha_{01}|^2 + |\alpha_{10}|^2 + |\alpha_{11}|^2 = 1$.
+\end{example}
+
+\subsection{Transformations unitaires : les portes quantiques}
+
+\begin{definition}[Opérateur unitaire]
+Un opérateur $U : \mathcal{H} \to \mathcal{H}$ est \textbf{unitaire} si :
+\[
+U^\dagger U = U U^\dagger = I
+\]
+où $U^\dagger$ est l'adjoint hermitien de $U$ (transposé conjugué) et $I$ l'identité.
+\end{definition}
+
+\begin{proposition}[Conservation de la norme]
+Les opérateurs unitaires préservent le produit scalaire :
+\[
+\langle U\psi | U\phi \rangle = \langle \psi | \phi \rangle
+\]
+En particulier, $\|U\psi\| = \|\psi\|$.
+\end{proposition}
+
+\begin{proof}
+\[
+\langle U\psi | U\phi \rangle = \langle \psi | U^\dagger U | \phi \rangle = \langle \psi | I | \phi \rangle = \langle \psi | \phi \rangle
+\]
+\end{proof}
+
+\begin{remark}[Interprétation physique]
+Les transformations unitaires sont les seules transformations réversibles en mécanique quantique. Elles garantissent la conservation de la probabilité totale (normalisation des états).
+\end{remark}
+
+\subsubsection{Portes à un qubit fondamentales}
+
+\paragraph{Porte de Pauli-X (NOT quantique) :}
+\[
+X = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}, \quad X|0\rangle = |1\rangle, \quad X|1\rangle = |0\rangle
+\]
+
+\paragraph{Porte de Pauli-Y :}
+\[
+Y = \begin{pmatrix} 0 & -i \\ i & 0 \end{pmatrix}, \quad Y|0\rangle = i|1\rangle, \quad Y|1\rangle = -i|0\rangle
+\]
+
+\paragraph{Porte de Pauli-Z (flip de phase) :}
+\[
+Z = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}, \quad Z|0\rangle = |0\rangle, \quad Z|1\rangle = -|1\rangle
+\]
+
+\paragraph{Porte de Hadamard :}
+\begin{definition}[Porte de Hadamard]
+La porte la plus importante pour créer des superpositions :
+\[
+H = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}
+\]
+Action sur la base computationnelle :
+\[
+H|0\rangle = \frac{|0\rangle + |1\rangle}{\sqrt{2}} = |+\rangle, \qquad H|1\rangle = \frac{|0\rangle - |1\rangle}{\sqrt{2}} = |-\rangle
+\]
+\end{definition}
+
+\begin{proposition}[Propriétés de Hadamard]
+\begin{enumerate}
+    \item $H$ est unitaire : $H^\dagger = H$ et $H^2 = I$
+    \item $H$ est hermitienne : $H = H^\dagger$
+    \item $H$ est involutive : appliquer $H$ deux fois revient à l'identité
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}[Vérification de l'unitarité]
+\[
+H^2 = \frac{1}{2} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix} = \frac{1}{2} \begin{pmatrix} 2 & 0 \\ 0 & 2 \end{pmatrix} = I
+\]
+\end{proof}
+
+\subsubsection{Portes à plusieurs qubits}
+
+\paragraph{Porte CNOT (Controlled-NOT) :}
+\[
+\text{CNOT} = \begin{pmatrix}
+1 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 0 & 1 \\
+0 & 0 & 1 & 0
+\end{pmatrix}
+\]
+Action : $\text{CNOT}|c,t\rangle = |c, t \oplus c\rangle$ où $\oplus$ est le XOR.
+
+\paragraph{Porte de Toffoli (CCNOT) :}
+Porte à 3 qubits : applique un NOT au troisième qubit si et seulement si les deux premiers sont à $|1\rangle$.
+
+\subsection{Mesure quantique et principe de projection}
+
+\begin{definition}[Mesure projective]
+Une mesure dans la base computationnelle d'un état $|\psi\rangle = \sum_{x=0}^{2^n-1} \alpha_x |x\rangle$ donne le résultat $x$ avec probabilité :
+\[
+P(x) = |\alpha_x|^2 = |\langle x | \psi \rangle|^2
+\]
+Après la mesure, l'état est projeté sur $|x\rangle$ (effondrement de la fonction d'onde).
+\end{definition}
+
+\begin{theorem}[Conservation de la probabilité]
+\[
+\sum_{x=0}^{2^n-1} P(x) = \sum_{x=0}^{2^n-1} |\alpha_x|^2 = \|\psi\|^2 = 1
+\]
+\end{theorem}
+
+\begin{remark}[Irréversibilité de la mesure]
+La mesure est le seul processus non-unitaire et irréversible en mécanique quantique. Elle détruit la superposition et l'intrication.
+\end{remark}
+
+\subsection{Superposition uniforme : état fondamental des algorithmes}
+
+\begin{definition}[Superposition uniforme]
+L'état de superposition uniforme sur $n$ qubits est :
+\[
+|s\rangle = \frac{1}{\sqrt{2^n}} \sum_{x=0}^{2^n-1} |x\rangle = H^{\otimes n} |0\rangle^{\otimes n}
+\]
+Chaque configuration $|x\rangle$ a la même amplitude $1/\sqrt{2^n}$ et donc la même probabilité de mesure $1/2^n$.
+\end{definition}
+
+\begin{proof}[Construction par Hadamard]
+Appliquons $H$ sur chaque qubit initialisé à $|0\rangle$ :
+\begin{align*}
+H|0\rangle &= \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle) \\
+H^{\otimes n}|0\rangle^{\otimes n} &= \bigotimes_{i=1}^n \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle) \\
+&= \frac{1}{2^{n/2}} \sum_{x_1 \in \{0,1\}} \cdots \sum_{x_n \in \{0,1\}} |x_1 \cdots x_n\rangle \\
+&= \frac{1}{\sqrt{2^n}} \sum_{x=0}^{2^n-1} |x\rangle
+\end{align*}
+\end{proof}
+
+\begin{example}[Superposition sur 3 qubits]
+\[
+|s\rangle = \frac{1}{\sqrt{8}}(|000\rangle + |001\rangle + |010\rangle + |011\rangle + |100\rangle + |101\rangle + |110\rangle + |111\rangle)
+\]
+Chaque état a une probabilité de $1/8 = 12{,}5\%$ d'être mesuré.
+\end{example}
+
+\subsection{Ensembles ordonnés et relations d'ordre}
+
+\begin{definition}[Relation d'ordre partiel]
+Un ensemble ordonné $(E, \leq)$ est un ensemble $E$ muni d'une relation binaire $\leq$ vérifiant pour tout $x, y, z \in E$ :
+\begin{enumerate}
+    \item \textbf{Réflexivité :} $x \leq x$
+    \item \textbf{Antisymétrie :} $x \leq y$ et $y \leq x \Rightarrow x = y$
+    \item \textbf{Transitivité :} $x \leq y$ et $y \leq z \Rightarrow x \leq z$
+\end{enumerate}
+\end{definition}
+
+\begin{definition}[Ordre total]
+Un ordre est dit \textbf{total} si pour tous $x, y \in E$, on a $x \leq y$ ou $y \leq x$ (comparabilité).
+\end{definition}
+
+\begin{definition}[Minimum global]
+Un élément $m \in E$ est un \textbf{minimum global} si :
+\[
+\forall x \in E, \quad m \leq x
+\]
+\end{definition}
+
+\begin{remark}
+Ces structures sont essentielles pour formaliser les problèmes d'optimisation traités par Dürr-Høyer.
+\end{remark}
+
+\newpage
+
+% ===========================
+\section{Abstract}
+
+Cet article propose une introduction rigoureuse et pédagogique aux algorithmes quantiques de recherche et d'optimisation, en les comparant systématiquement à leurs homologues classiques. Nous étudions d'abord le tri par sélection classique (complexité $O(n^2)$), puis nous présentons deux algorithmes quantiques fondamentaux : l'algorithme de Grover pour la recherche non structurée (complexité $O(\sqrt{N})$) et l'algorithme de Dürr-Høyer pour la recherche du minimum (complexité $O(\sqrt{N})$).
+
+Les résultats théoriques sont illustrés par des implémentations complètes en Python et Qiskit, simulées sur des backends quantiques. Nous démontrons mathématiquement les accélérations quadratiques offertes par le parallélisme quantique, tout en discutant les limites actuelles liées au bruit, à la décohérence et au nombre restreint de qubits disponibles.
+
+Cette étude met en lumière le potentiel considérable de l'informatique quantique pour les problèmes combinatoires, tout en soulignant les défis techniques qui doivent encore être surmontés avant une exploitation pratique à grande échelle.
+
+\paragraph{Mots-clés :} Informatique quantique, Algorithme de Grover, Dürr-Høyer, Complexité algorithmique, Qiskit, Superposition, Amplification d'amplitude.
+
+\newpage
+
+% ===========================
+\section{Introduction}
+
+L'informatique classique, fondée sur la manipulation de bits binaires et l'exécution séquentielle d'instructions, a transformé le monde moderne. Cependant, certains problèmes restent intrinsèquement difficiles : la recherche dans une base de données non triée nécessite $O(N)$ opérations, le tri requiert au mieux $O(N \log N)$ comparaisons, et certains problèmes de factorisation ou d'optimisation combinatoire demeurent exponentiels.
+
+L'informatique quantique propose un paradigme radicalement différent, exploitant les principes de la mécanique quantique : la \textbf{superposition} permet de représenter simultanément plusieurs états, l'\textbf{intrication} crée des corrélations non classiques entre qubits, et l'\textbf{interférence} amplifie les bonnes solutions tout en annulant les mauvaises.
+
+Cette étude se concentre sur deux algorithmes fondamentaux :
+\begin{enumerate}
+    \item \textbf{L'algorithme de Grover} (1996)~\cite{grover1996} : recherche un élément marqué parmi $N$ avec $O(\sqrt{N})$ requêtes, soit une accélération quadratique.
+    \item \textbf{L'algorithme de Dürr-Høyer} (1996)~\cite{durr1996} : trouve le minimum d'une fonction non structurée en $O(\sqrt{N})$ évaluations, généralisant Grover à l'optimisation.
+\end{enumerate}
+
+\paragraph{Problématique centrale :}
+\textit{Dans quelle mesure l'informatique quantique offre-t-elle un avantage pour les problèmes de recherche et d'optimisation ? Quelles sont les limites théoriques et pratiques de ces algorithmes ?}
+
+Nous commençons par rappeler les algorithmes classiques (recherche linéaire, tri par sélection), puis nous développons la théorie des algorithmes quantiques avec des démonstrations mathématiques complètes. Enfin, nous présentons des implémentations et discutons les perspectives.
+
+\newpage
+
+% ===========================
+\section{Revue de la littérature}
+
+\subsection{Algorithmes classiques de tri et de recherche}
+
+Les algorithmes de tri classiques sont bien établis~\cite{cormen2009algorithms} :
+\begin{itemize}
+    \item \textbf{Tri par insertion, tri par sélection :} $O(n^2)$ comparaisons dans le pire cas
+    \item \textbf{Tri fusion, tri rapide, tri par tas :} $O(n \log n)$ comparaisons en moyenne
+    \item \textbf{Borne inférieure :} Tout algorithme de tri par comparaison nécessite $\Omega(n \log n)$ comparaisons~\cite{cormen2009algorithms}
+\end{itemize}
+
+\subsection{Algorithmes quantiques de recherche}
+
+\paragraph{Algorithme de Grover (1996)~\cite{grover1996} :}
+Premier algorithme quantique offrant une accélération quadratique prouvée. Il recherche un élément marqué dans une liste non triée de $N$ éléments en $O(\sqrt{N})$ requêtes oracle, contre $O(N)$ classiquement.
+
+\paragraph{Borne inférieure de Bennett et al. (1997)~\cite{bennett1997} :}
+Démontre que $\Omega(\sqrt{N})$ est optimal pour la recherche quantique non structurée, prouvant que Grover est asymptotiquement optimal.
+
+\paragraph{Algorithme de Dürr-Høyer (1996)~\cite{durr1996} :}
+Généralise Grover à la recherche du minimum d'une fonction. En utilisant Grover itérativement avec un oracle adaptatif, il trouve le minimum en $O(\sqrt{N})$ évaluations avec haute probabilité.
+
+\subsection{Limitations des algorithmes quantiques de tri}
+
+Contrairement à l'intuition, aucun algorithme quantique de tri général ne surpasse la borne $\Omega(n \log n)$~\cite{hoyer2000quantum}. L'accélération quantique est limitée aux problèmes de recherche non structurée, mais ne s'applique pas au tri complet.
+
+Des approches expérimentales comme le "quantum divide-compare-swap" revendiquent $O(n)$ dans des cas particuliers, mais ces résultats restent controversés et non vérifiés.
+
+\newpage
+
+% ===========================
+\section{Recherche du minimum en informatique classique}
+
+\subsection{Formalisation mathématique}
+
+\begin{definition}[Problème de recherche du minimum]
+Soit $f : [N] \to \mathbb{R}$ une fonction où $[N] = \{0, 1, \ldots, N-1\}$. Le problème consiste à trouver :
+\[
+x^* = \arg\min_{x \in [N]} f(x)
+\]
+\end{definition}
+
+\begin{theorem}[Complexité optimale classique]
+Tout algorithme déterministe de recherche du minimum nécessite exactement $N-1$ comparaisons dans le pire cas.
+\end{theorem}
+
+\begin{proof}
+Considérons l'arbre de décision de l'algorithme. Chaque comparaison correspond à un nœud interne. Pour distinguer $N$ éléments possibles comme minimum, l'arbre doit avoir au moins $N$ feuilles. Un arbre binaire de hauteur $h$ a au plus $2^h$ feuilles. Donc :
+\[
+2^h \geq N \Rightarrow h \geq \log_2 N
+\]
+Cependant, pour la recherche du minimum, on peut montrer par un argument adversarial qu'exactement $N-1$ comparaisons sont nécessaires : chaque élément sauf un doit "perdre" au moins une comparaison pour être exclu.
+\end{proof}
+
+\subsection{Algorithme itératif}
+
+Voir fichier trouver\_minimum.py
+
+\begin{remark}[Optimalité]
+Cet algorithme effectue exactement $n-1$ comparaisons, ce qui est optimal.
+\end{remark}
+
+\newpage
+
+% ===========================
+\section{Algorithme de tri par sélection classique}
+
+\subsection{Principe et analyse}
+
+Le tri par sélection applique itérativement la recherche du minimum sur des sous-tableaux décroissants.
+
+\begin{theorem}[Complexité du tri par sélection]
+Le tri par sélection effectue exactement :
+\[
+\sum_{i=0}^{n-2} (n-i-1) = \sum_{j=1}^{n-1} j = \frac{n(n-1)}{2} = \Theta(n^2)
+\]
+comparaisons, indépendamment de l'entrée.
+\end{theorem}
+
+\begin{proof}
+À l'itération $i$ (pour $i = 0, \ldots, n-2$), on recherche le minimum parmi les $n-i$ éléments restants, ce qui nécessite $n-i-1$ comparaisons. La somme totale est :
+\[
+\sum_{i=0}^{n-2} (n-i-1) = (n-1) + (n-2) + \cdots + 1 = \frac{n(n-1)}{2}
+\]
+Cette complexité est donc $\Theta(n^2)$ et ne dépend pas de l'ordre initial des éléments.
+\end{proof}
+
+\subsection{Implémentation}
+
+Voir fichier tri\_select.py
+
+\begin{remark}[Stabilité]
+Le tri par sélection n'est \textbf{pas stable} : l'ordre relatif des éléments égaux peut changer. Par exemple, si deux éléments ont la même valeur mais des positions différentes, leur ordre peut être inversé après le tri.
+\end{remark}
+
+\begin{remark}[Avantages et inconvénients]
+\textbf{Avantages :}
+\begin{itemize}
+    \item Simple à implémenter
+    \item Nombre minimal d'échanges : $n-1$ au maximum
+    \item Tri en place : $O(1)$ mémoire auxiliaire
+\end{itemize}
+\textbf{Inconvénients :}
+\begin{itemize}
+    \item $O(n^2)$ : inefficace pour grandes données
+    \item Pas adaptatif : même complexité sur tableau déjà trié
+    \item Non stable
+\end{itemize}
+\end{remark}
+
+\newpage
+
+% ===========================
+\section{Algorithme de Grover : recherche quantique}
+
+L'algorithme de Grover~\cite{grover1996} est un pilier de l'informatique quantique. Il résout le problème de la recherche non structurée avec une accélération quadratique prouvée optimale.
+
+\subsection{Énoncé du problème}
+
+\begin{definition}[Problème de recherche oracle]
+Soit $f : \{0, 1, \ldots, N-1\} \to \{0, 1\}$ une fonction booléenne telle qu'il existe un unique $w$ vérifiant $f(w) = 1$ (la "solution") et $f(x) = 0$ pour tout $x \neq w$. Le problème consiste à identifier $w$ en effectuant le minimum de requêtes à $f$.
+\end{definition}
+
+\begin{remark}[Modèle oracle]
+On suppose avoir accès à $f$ uniquement via un oracle (boîte noire). Classiquement, il faut en moyenne $N/2$ requêtes et $N$ dans le pire cas.
+\end{remark}
+
+\subsection{Principe géométrique de Grover}
+
+L'algorithme de Grover peut être compris comme une \textbf{rotation géométrique} dans un plan à deux dimensions.
+
+\subsubsection{Décomposition de l'espace}
+
+Soit $N = 2^n$ la taille de l'espace de recherche. Définissons :
+\begin{align}
+|w\rangle &= \text{état solution (unique)} \\
+|s'\rangle &= \frac{1}{\sqrt{N-1}} \sum_{x \neq w} |x\rangle \quad \text{(états non-solutions)}
+\end{align}
+
+Ces deux vecteurs sont orthogonaux : $\langle w | s' \rangle = 0$, et engendrent un plan $\mathcal{P} = \text{Vect}(|w\rangle, |s'\rangle)$.
+
+\subsubsection{État initial}
+
+La superposition uniforme s'écrit dans cette base :
+\[
+|s\rangle = \frac{1}{\sqrt{N}} \sum_{x=0}^{N-1} |x\rangle = \frac{1}{\sqrt{N}} |w\rangle + \frac{\sqrt{N-1}}{\sqrt{N}} |s'\rangle
+\]
+
+Posons $\theta$ tel que :
+\[
+\sin\theta = \frac{1}{\sqrt{N}}, \quad \cos\theta = \frac{\sqrt{N-1}}{\sqrt{N}}
+\]
+
+Alors :
+\[
+|s\rangle = \sin\theta |w\rangle + \cos\theta |s'\rangle
+\]
+
+Pour $N$ grand, $\theta \approx 1/\sqrt{N}$ (petit angle).
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=2]
+    % Axes
+    \draw[->] (0,0) -- (3.5,0) node[right] {$|s'\rangle$};
+    \draw[->] (0,0) -- (0,2.5) node[above] {$|w\rangle$};
+    
+    % État initial |s>
+    \draw[->, thick, blue] (0,0) -- (3,0.5) node[midway, below right] {$|s\rangle$};
+    \draw[dashed] (3,0) -- (3,0.5);
+    \draw[dashed] (0,0.5) -- (3,0.5);
+    
+    % Angle theta
+    \draw[red] (0.5,0) arc (0:9.5:0.5);
+    \node[red] at (0.7,0.15) {$\theta$};
+    
+    % État final après k itérations
+    \draw[->, thick, green!60!black] (0,0) -- (1.5,2.3) node[midway, left] {après $k$ iter.};
+    \draw[dashed, green!60!black] (1.5,0) -- (1.5,2.3);
+    
+    % Angle (2k+1)theta
+    \draw[green!60!black] (0.8,0) arc (0:57:0.8);
+    \node[green!60!black] at (0.5,0.5) {$(2k+1)\theta$};
+\end{tikzpicture}
+\caption{Représentation géométrique de l'algorithme de Grover dans le plan $(|s'\rangle, |w\rangle)$}
+\end{figure}
+
+\subsection{Opérateurs de Grover}
+
+\subsubsection{Oracle de phase}
+
+\begin{definition}[Oracle $U_f$]
+L'oracle inverse la phase de l'état solution :
+\[
+U_f |x\rangle = (-1)^{f(x)} |x\rangle = \begin{cases}
+-|x\rangle & \text{si } x = w \\
+|x\rangle & \text{sinon}
+\end{cases}
+\]
+\end{definition}
+
+En termes de projection :
+\[
+U_f = I - 2|w\rangle\langle w|
+\]
+
+\begin{proposition}[Réflexion autour de $|s'\rangle$]
+$U_f$ est une réflexion par rapport à l'hyperplan orthogonal à $|w\rangle$.
+\end{proposition}
+
+\begin{proof}
+Pour tout $|\psi\rangle = \alpha|w\rangle + \beta|s'\rangle$ :
+\[
+U_f|\psi\rangle = -\alpha|w\rangle + \beta|s'\rangle
+\]
+Ce qui correspond à une réflexion selon $|s'\rangle$ dans le plan $\mathcal{P}$.
+\end{proof}
+
+\subsubsection{Diffuseur (inversion autour de la moyenne)}
+
+\begin{definition}[Diffuseur $U_s$]
+\[
+U_s = 2|s\rangle\langle s| - I
+\]
+C'est une réflexion par rapport à l'état $|s\rangle$.
+\end{definition}
+
+\begin{proposition}[Implémentation du diffuseur]
+$U_s$ peut se décomposer en portes élémentaires :
+\[
+U_s = H^{\otimes n} \left(2|0\rangle\langle 0| - I\right) H^{\otimes n}
+\]
+\end{proposition}
+
+\begin{proof}
+Puisque $|s\rangle = H^{\otimes n}|0\rangle^{\otimes n}$, on a :
+\[
+U_s = H^{\otimes n} (2|0\rangle\langle 0| - I) (H^{\otimes n})^\dagger = H^{\otimes n} (2|0\rangle\langle 0| - I) H^{\otimes n}
+\]
+car $H$ est hermitienne.
+\end{proof}
+
+Le terme $2|0\rangle\langle 0| - I$ inverse la phase de tous les états sauf $|0\rangle$, et peut être implémenté par :
+\begin{enumerate}
+    \item Appliquer $X$ sur tous les qubits
+    \item Appliquer une porte multi-contrôlée $Z$ (CCZ)
+    \item Appliquer $X$ sur tous les qubits
+\end{enumerate}
+
+\subsection{Itération de Grover}
+
+\begin{definition}[Opérateur de Grover]
+Une itération complète est :
+\[
+G = U_s U_f
+\]
+\end{definition}
+
+\begin{theorem}[Rotation de Grover]
+Dans le plan $\mathcal{P}$, l'opérateur $G$ effectue une rotation d'angle $2\theta$ :
+\[
+G^k |s\rangle = \sin((2k+1)\theta) |w\rangle + \cos((2k+1)\theta) |s'\rangle
+\]
+\end{theorem}
+
+\begin{proof}
+Montrons que $G$ est une rotation. Dans la base $\{|s'\rangle, |w\rangle\}$, écrivons :
+\begin{align*}
+U_f &: (\cos\phi, \sin\phi) \mapsto (\cos\phi, -\sin\phi) \quad \text{(réflexion horizontale)} \\
+U_s &: (\alpha, \beta) \mapsto (2\langle s | \psi \rangle \cos\theta - \alpha, 2\langle s | \psi \rangle \sin\theta - \beta)
+\end{align*}
+
+Après calculs, on montre que $G$ correspond à la matrice de rotation :
+\[
+G = \begin{pmatrix}
+\cos(2\theta) & -\sin(2\theta) \\
+\sin(2\theta) & \cos(2\theta)
+\end{pmatrix}
+\]
+dans la base $(|s'\rangle, |w\rangle)$.
+
+Donc $G^k$ est une rotation de $2k\theta$, d'où :
+\[
+G^k |s\rangle = G^k (\sin\theta |w\rangle + \cos\theta |s'\rangle) = \sin((2k+1)\theta) |w\rangle + \cos((2k+1)\theta) |s'\rangle
+\]
+\end{proof}
+
+\subsection{Nombre optimal d'itérations}
+
+\begin{theorem}[Nombre optimal d'itérations]
+La probabilité de mesurer $|w\rangle$ après $k$ itérations est :
+\[
+P(w, k) = \sin^2((2k+1)\theta)
+\]
+Cette probabilité est maximale pour :
+\[
+k^* \approx \frac{\pi}{4\theta} - \frac{1}{2} \approx \frac{\pi}{4}\sqrt{N}
+\]
+atteignant alors $P(w, k^*) \geq 1 - 1/N$ (presque certainement).
+\end{theorem}
+
+\begin{proof}
+La probabilité est maximale quand $(2k+1)\theta = \pi/2$, soit :
+\[
+k = \frac{\pi - 2\theta}{4\theta} = \frac{\pi}{4\theta} - \frac{1}{2}
+\]
+Pour $N$ grand, $\theta \approx 1/\sqrt{N}$, donc :
+\[
+k^* \approx \frac{\pi}{4} \sqrt{N}
+\]
+À ce point, $\sin^2(\pi/2) = 1$, d'où $P(w, k^*) \approx 1$.
+\end{proof}
+
+\begin{corollary}[Complexité de Grover]
+L'algorithme de Grover trouve la solution avec probabilité constante en $O(\sqrt{N})$ requêtes oracle, soit une accélération quadratique par rapport au cas classique.
+\end{corollary}
+
+\subsection{Optimalité de Grover}
+
+\begin{theorem}[Borne inférieure de Bennett-Bernstein-Brassard-Vazirani~\cite{bennett1997}]
+Tout algorithme quantique de recherche non structurée nécessite $\Omega(\sqrt{N})$ requêtes oracle. L'algorithme de Grover est donc asymptotiquement optimal.
+\end{theorem}
+
+\subsection{Exemple numérique détaillé}
+
+Considérons $N = 8$ (donc $n = 3$ qubits) et cherchons $w = 5$ (soit $|101\rangle$).
+
+\paragraph{Paramètres :}
+\[
+\sin\theta = \frac{1}{\sqrt{8}} \approx 0{,}3536 \Rightarrow \theta \approx 20{,}7^\circ \approx 0{,}361 \text{ rad}
+\]
+
+\paragraph{Nombre optimal d'itérations :}
+\[
+k^* = \left\lfloor \frac{\pi}{4\theta} \right\rfloor = \left\lfloor \frac{\pi}{4 \times 0{,}361} \right\rfloor = \lfloor 2{,}17 \rfloor = 2
+\]
+
+\paragraph{Probabilités de succès :}
+\begin{align*}
+k = 0 \text{ (état initial)} &: P(w, 0) = \sin^2(\theta) = \frac{1}{8} = 12{,}5\% \\
+k = 1 &: P(w, 1) = \sin^2(3\theta) = \sin^2(1{,}083) \approx 79{,}1\% \\
+k = 2 &: P(w, 2) = \sin^2(5\theta) = \sin^2(1{,}805) \approx 94{,}5\% \\
+k = 3 &: P(w, 3) = \sin^2(7\theta) = \sin^2(2{,}527) \approx 59{,}4\% \text{ (sur-rotation)}
+\end{align*}
+
+On observe le phénomène de \textbf{sur-rotation} : trop d'itérations font "dépasser" l'état cible et diminuent la probabilité de succès.
+
+\subsection{Implémentation avec Qiskit}
+
+Voir fichier grover.py
+
+\subsection{Interprétation physique et intuition}
+
+\paragraph{Analogie avec une recherche dans l'obscurité :}
+Imaginez chercher une pièce spécifique dans une salle sombre contenant $N$ objets identiques au toucher.
+
+\textbf{Classiquement :} Vous devez palper chaque objet un par un jusqu'à trouver la bonne pièce. En moyenne, vous en toucherez $N/2$.
+
+\textbf{Quantiquement :} Vous allumez une lumière stroboscopique spéciale qui, à chaque flash, rend la bonne pièce légèrement plus brillante que les autres, tandis que les mauvaises s'assombrissent. Après $\sqrt{N}$ flashs, une seule pièce est illuminée : c'est la bonne !
+
+Le "flash" correspond à une itération de Grover (oracle + diffuseur), et l'amplification progressive de la luminosité représente l'augmentation de l'amplitude quantique.
+
+\newpage
+
+% ===========================
+\section{Algorithme de Dürr-Høyer : recherche quantique du minimum}
+
+L'algorithme de Dürr-Høyer~\cite{durr1996} généralise brillamment celui de Grover pour résoudre des problèmes d'optimisation. Il trouve le minimum d'une fonction en $O(\sqrt{N})$ évaluations avec probabilité élevée.
+
+\subsection{Énoncé du problème}
+
+\begin{definition}[Problème de recherche du minimum]
+Soit $f : [N] \to \mathbb{R}$ une fonction quelconque. Le problème consiste à trouver :
+\[
+x^* = \arg\min_{x \in [N]} f(x)
+\]
+en minimisant le nombre d'évaluations de $f$.
+\end{definition}
+
+\begin{remark}
+Contrairement à Grover qui cherche un élément marqué par une condition booléenne, Dürr-Høyer doit comparer des valeurs numériques.
+\end{remark}
+
+\subsection{Principe de l'algorithme}
+
+L'idée clé est d'utiliser Grover de manière \textbf{itérative et adaptative} :
+
+\begin{enumerate}
+    \item Choisir un candidat initial $x_{\text{best}}$ aléatoirement
+    \item Construire un oracle quantique qui marque tous les états $|x\rangle$ tels que $f(x) < f(x_{\text{best}})$
+    \item Appliquer Grover pour trouver un tel $x$ avec haute probabilité
+    \item Si $f(x) < f(x_{\text{best}})$, mettre à jour $x_{\text{best}} \leftarrow x$
+    \item Répéter jusqu'à ce qu'aucune amélioration ne soit trouvée
+\end{enumerate}
+
+\subsection{Construction formelle}
+
+\subsubsection{Oracle comparateur}
+
+\begin{definition}[Oracle dépendant du seuil]
+Pour un seuil $y \in \mathbb{R}$, l'oracle $U_f^{(y)}$ est défini par :
+\[
+U_f^{(y)} |x\rangle = \begin{cases}
+-|x\rangle & \text{si } f(x) < y \\
+|x\rangle & \text{sinon}
+\end{cases}
+\]
+\end{definition}
+
+Cet oracle marque tous les éléments "meilleurs" que le seuil courant.
+
+\subsubsection{Analyse probabiliste}
+
+Soit $M$ le nombre d'indices $x$ tels que $f(x) < f(x_{\text{best}})$.
+
+\begin{lemma}[Probabilité de succès de Grover avec $M$ solutions]
+Si on applique $k = \left\lfloor \frac{\pi}{4}\sqrt{N/M} \right\rfloor$ itérations de Grover avec un oracle marquant $M$ éléments, la probabilité de mesurer l'un d'eux est au moins $1/2$.
+\end{lemma}
+
+\begin{proof}
+L'angle initial est $\sin\theta_M = \sqrt{M/N}$, donc $\theta_M \approx \sqrt{M/N}$ pour $M \ll N$. Après $k$ itérations :
+\[
+P(\text{succès}) = \sin^2((2k+1)\theta_M)
+\]
+Pour $k = \frac{\pi}{4\theta_M}$, on a $(2k+1)\theta_M \approx \pi/2$, donc $P \approx 1$.
+\end{proof}
+
+\subsection{Algorithme complet}
+
+\begin{theorem}[Complexité de Dürr-Høyer]
+L'algorithme de Dürr-Høyer trouve le minimum d'une fonction non structurée avec probabilité au moins $1/2$ en effectuant $O(\sqrt{N})$ évaluations de $f$.
+\end{theorem}
+
+\begin{proof}[Esquisse de preuve]
+\begin{enumerate}
+    \item À chaque itération externe, on recherche un élément meilleur que $x_{\text{best}}$ parmi au plus $N$ candidats
+    \item Si $M$ éléments sont meilleurs, Grover nécessite $O(\sqrt{N/M})$ requêtes pour en trouver un
+    \item En moyenne, $M$ décroît exponentiellement : $M_i \approx N/2^i$ après $i$ itérations
+    \item La somme géométrique donne :
+    \[
+    \sum_{i=1}^{\log N} O\left(\sqrt{N/M_i}\right) = \sum_{i=1}^{\log N} O\left(\sqrt{2^i}\right) = O(\sqrt{N})
+    \]
+\end{enumerate}
+\end{proof}
+
+\subsection{Implémentation Qiskit complète}
+
+Le code suivant illustre Dürr-Høyer sur un tableau de 100 valeurs aléatoires.
+
+Voir Durr\_Hoyer.py
+
+\newpage
+
+\subsection{Interprétation des résultats}
+
+Le graphique montre la \textbf{convergence progressive} vers le minimum global. Chaque saut vertical correspond à une amélioration trouvée par Grover.
+
+\begin{remark}[Convergence stochastique]
+Contrairement aux algorithmes déterministes, Dürr-Høyer présente une convergence \textbf{stochastique} : le chemin emprunté dépend des mesures quantiques. Cependant, avec probabilité élevée, le minimum est atteint en $O(\sqrt{N})$ étapes.
+\end{remark}
+
+\subsection{Comparaison mathématique des approches}
+
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Approche} & \textbf{Complexité} & \textbf{Nature} & \textbf{Probabilité} \\
+\hline
+Recherche linéaire & $\Theta(N)$ & Déterministe & $1$ (certain) \\
+Grover (1 solution) & $O(\sqrt{N})$ & Quantique & $\geq 1 - 1/N$ \\
+Dürr-Høyer & $O(\sqrt{N})$ & Quantique & $\geq 1/2$ \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Analyse de la complexité amortie}
+
+\begin{proposition}[Nombre d'itérations externes]
+En moyenne, Dürr-Høyer nécessite $O(\log N)$ itérations externes (mises à jour de $x_{\text{best}}$).
+\end{proposition}
+
+\begin{proof}[Argument heuristique]
+Si les valeurs sont distribuées aléatoirement, après avoir trouvé un élément parmi les $N$ initiaux, le prochain meilleur est parmi $\approx N/2$ restants, puis $N/4$, etc. La profondeur moyenne est donc $O(\log N)$.
+
+Chaque itération externe coûte $O(\sqrt{N})$ requêtes Grover, mais la somme converge :
+\[
+\sum_{i=0}^{\log N} O\left(\sqrt{N/2^i}\right) = O\left(\sqrt{N} \sum_{i=0}^{\log N} \frac{1}{\sqrt{2^i}}\right) = O(\sqrt{N})
+\]
+car la série géométrique $\sum 1/\sqrt{2^i}$ converge vers une constante.
+\end{proof}
+
+\subsection{Analogie intuitive}
+
+\paragraph{Analogie de la montagne :}
+Imaginez chercher le point le plus bas d'un paysage montagneux dans le brouillard.
+
+\textbf{Classiquement :} Vous marchez méthodiquement sur chaque point du terrain pour noter l'altitude. Cela prend $N$ mesures.
+
+\textbf{Avec Dürr-Høyer :} Vous avez un détecteur quantique qui, à chaque étape, vous indique (avec haute probabilité) la direction où se trouvent des points plus bas que votre position actuelle. À chaque "ping" du détecteur, vous sautez instantanément vers un point plus bas. Après $\sqrt{N}$ sauts, vous êtes (probablement) au point le plus bas.
+
+Le détecteur quantique est Grover, et chaque saut correspond à une amélioration de $x_{\text{best}}$.
+
+\newpage
+
+% ===========================
+\section{Analyse comparative des complexités}
+
+\subsection{Tableau récapitulatif}
+
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Algorithme} & \textbf{Complexité temporelle} & \textbf{Complexité spatiale} & \textbf{Nature} \\
+\hline
+\hline
+\multicolumn{4}{|c|}{\textit{Algorithmes classiques}} \\
+\hline
+Recherche du minimum & $\Theta(n)$ & $O(1)$ & Déterministe \\
+Tri par sélection & $\Theta(n^2)$ & $O(1)$ & Déterministe \\
+Tri fusion & $\Theta(n \log n)$ & $O(n)$ & Déterministe \\
+Tri rapide (moyenne) & $\Theta(n \log n)$ & $O(\log n)$ & Probabiliste \\
+\hline
+\hline
+\multicolumn{4}{|c|}{\textit{Algorithmes quantiques}} \\
+\hline
+Grover (recherche) & $O(\sqrt{N})$ requêtes & $O(n)$ qubits & Probabiliste \\
+Dürr-Høyer (minimum) & $O(\sqrt{N})$ évaluations & $O(n)$ qubits & Probabiliste \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Gain asymptotique}
+
+Pour illustrer l'accélération quantique, considérons différentes tailles de données :
+
+\begin{center}
+\begin{tabular}{|r|r|r|r|}
+\hline
+\textbf{Taille} $N$ & \textbf{Classique} $O(N)$ & \textbf{Quantique} $O(\sqrt{N})$ & \textbf{Gain} \\
+\hline
+$10^2$ & $100$ & $10$ & $10\times$ \\
+$10^4$ & $10\,000$ & $100$ & $100\times$ \\
+$10^6$ & $1\,000\,000$ & $1\,000$ & $1\,000\times$ \\
+$10^9$ & $1\,000\,000\,000$ & $31\,623$ & $31\,623\times$ \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{remark}[Interprétation pratique]
+Pour une base de données d'un milliard d'entrées, un algorithme classique nécessiterait un milliard d'opérations, tandis que Grover n'en demanderait qu'environ 32 000 : une réduction de 5 ordres de grandeur !
+\end{remark}
+
+\subsection{Bornes inférieures et optimalité}
+
+\begin{theorem}[Borne inférieure pour la recherche non structurée]
+Tout algorithme quantique de recherche dans une base de données non structurée de taille $N$ nécessite $\Omega(\sqrt{N})$ requêtes oracle~\cite{bennett1997}.
+\end{theorem}
+
+Cette borne prouve que Grover et Dürr-Høyer sont \textbf{asymptotiquement optimaux} : aucun algorithme quantique ne peut faire mieux.
+
+\begin{theorem}[Borne inférieure pour le tri]
+Tout algorithme de tri quantique nécessite $\Omega(n \log n)$ comparaisons~\cite{hoyer2000quantum}.
+\end{theorem}
+
+Cela signifie que le quantique n'offre \textbf{pas d'avantage} pour le tri complet, contrairement à la recherche.
+
+\subsection{Limites de l'accélération quantique}
+
+\paragraph{Pas d'accélération exponentielle :}
+L'accélération quadratique ($\sqrt{N}$ vs $N$) est significative mais reste polynomiale. Seuls des algorithmes comme Shor (factorisation) offrent une accélération exponentielle.
+
+\newpage
+
+% ===========================
+\section{Limitations pratiques et perspectives}
+
+\subsection{Défis technologiques actuels}
+
+\subsubsection{Décohérence et bruit quantique}
+
+\begin{definition}[Décohérence]
+La décohérence est la perte progressive de la superposition et de l'intrication due aux interactions avec l'environnement. Elle limite le temps pendant lequel un calcul quantique peut être effectué.
+\end{definition}
+
+\paragraph{Temps de cohérence typiques (2025) :}
+\begin{itemize}
+    \item \textbf{Supraconducteurs} (IBM, Google) : $T_2 \sim 100\text{--}200$ µs
+    \item \textbf{Ions piégés} (IonQ, Honeywell) : $T_2 \sim 10$ s
+    \item \textbf{Atomes neutres} : $T_2 \sim 1$ s
+\end{itemize}
+
+\begin{remark}
+Pour exécuter Grover sur $N = 10^6$ (nécessitant $\sim 1000$ itérations avec $\sim 100$ portes chacune), il faut environ $10^5$ portes. À $1$ µs par porte, cela prend $100$ ms, ce qui dépasse les temps de cohérence actuels des supraconducteurs.
+\end{remark}
+
+\subsubsection{Fidélité des portes quantiques}
+
+\begin{definition}[Fidélité]
+La fidélité d'une porte quantique mesure la probabilité qu'elle s'exécute correctement. Une fidélité de $99\%$ signifie $1\%$ d'erreur par porte.
+\end{definition}
+
+\paragraph{Fidélités typiques (2025) :}
+\begin{itemize}
+    \item Portes à 1 qubit : $99{,}9\%$ (IBM, Google)
+    \item Portes à 2 qubits (CNOT) : $99\%$ (supraconducteurs), $99{,}9\%$ (ions piégés)
+\end{itemize}
+
+\begin{proposition}[Accumulation d'erreurs]
+Pour un circuit de profondeur $d$ avec fidélité moyenne $F$ par porte, la fidélité totale est approximativement :
+\[
+F_{\text{total}} \approx F^d
+\]
+\end{proposition}
+
+\begin{example}
+Un circuit Grover avec $1000$ portes à $F = 99\%$ a une fidélité totale de :
+\[
+F_{\text{total}} \approx 0{,}99^{1000} \approx 4{,}3 \times 10^{-5} \approx 0{,}004\%
+\]
+Le circuit échoue pratiquement toujours !
+\end{example}
+
+\subsubsection{Correction d'erreurs quantiques}
+
+\begin{definition}[Code correcteur quantique]
+Un code correcteur quantique encode $k$ qubits logiques dans $n > k$ qubits physiques de manière à détecter et corriger les erreurs sans mesurer (et donc détruire) l'état quantique.
+\end{definition}
+
+\paragraph{Code de surface :}
+Le code correcteur le plus prometteur actuellement. Pour protéger 1 qubit logique avec fidélité $\sim 99{,}9\%$, il faut environ :
+\[
+n_{\text{phys}} \sim 1000 \text{ qubits physiques}
+\]
+
+\begin{remark}[Overhead considérable]
+Pour exécuter Grover sur $N = 10^6$ ($\sim 20$ qubits logiques), il faudrait environ $20\,000$ qubits physiques avec correction d'erreurs, bien au-delà des machines actuelles ($\sim 1000$ qubits).
+\end{remark}
+
+\subsection{Comparaison : simulation vs matériel réel}
+
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Caractéristique} & \textbf{Simulation (Qiskit)} & \textbf{Matériel quantique (2025)} \\
+\hline
+Nombre de qubits & $\sim 30$ (ordinateur classique) & $\sim 100\text{--}1000$ \\
+Fidélité & $100\%$ (parfait) & $\sim 99\%$ (bruité) \\
+Décohérence & Aucune & $T_2 \sim 100$ µs (supracond.) \\
+Vitesse & Lente (exponentielle en $n$) & Rapide (intrinsèque) \\
+Coût & Gratuit & Très élevé \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Perspectives et applications futures}
+
+\subsubsection{Applications potentielles de Grover et Dürr-Høyer}
+
+\paragraph{Cryptographie :}
+Grover peut accélérer les attaques par force brute sur les clés symétriques (AES). Une clé de 128 bits nécessiterait $2^{64}$ opérations quantiques au lieu de $2^{128}$ classiquement. Solution : doubler la longueur des clés (AES-256).
+
+\paragraph{Optimisation combinatoire :}
+Dürr-Høyer pourrait accélérer :
+\begin{itemize}
+    \item Problème du voyageur de commerce (TSP)
+    \item Optimisation de portefeuilles financiers
+    \item Planification logistique
+\end{itemize}
+Cependant, l'accélération reste quadratique, insuffisante pour les grandes instances NP-difficiles.
+
+\paragraph{Recherche dans les bases de données :}
+Pour des bases de données massives (big data), Grover offrirait des gains substantiels, à condition de pouvoir interfacer efficacement mémoire classique et processeur quantique.
+
+\subsubsection{Vers l'informatique quantique hybride}
+
+\begin{definition}[Algorithme hybride classique-quantique]
+Un algorithme qui utilise un processeur quantique pour certaines sous-tâches critiques, tandis que le reste du calcul est effectué classiquement.
+\end{definition}
+
+\paragraph{Exemple : QAOA (Quantum Approximate Optimization Algorithm) :}
+\begin{enumerate}
+    \item Le processeur quantique prépare un état dépendant de paramètres $\vec{\theta}$
+    \item On mesure l'énergie (classiquement)
+    \item Un optimiseur classique ajuste $\vec{\theta}$
+    \item On répète jusqu'à convergence
+\end{enumerate}
+
+Cette approche exploite les forces de chaque paradigme et est plus robuste au bruit.
+
+\subsubsection{Jalons technologiques attendus}
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Horizon} & \textbf{Jalons prévus} \\
+\hline
+2025--2027 & $\sim 1000$ qubits, $T_2 > 1$ ms, fidélité $> 99{,}5\%$ \\
+2028--2030 & Premiers codes correcteurs efficaces, qubits logiques \\
+2030--2035 & $\sim 10$ qubits logiques, applications pratiques limitées \\
+2035+ & Ordinateurs quantiques tolérants aux fautes (FTQC) \\
+\hline
+\end{tabular}
+\end{center}
+
+\newpage
+
+% ===========================
+\section{Conclusion}
+
+Cette étude a présenté une introduction rigoureuse et pédagogique aux algorithmes quantiques de recherche et d'optimisation, en les comparant systématiquement à leurs équivalents classiques.
+
+\subsection{Synthèse des résultats}
+
+\paragraph{Algorithmes classiques :}
+\begin{itemize}
+    \item La recherche du minimum nécessite $\Theta(n)$ comparaisons (optimal)
+    \item Le tri par sélection effectue $\Theta(n^2)$ comparaisons (inefficace)
+    \item Le tri optimal (fusion, rapide) atteint $\Theta(n \log n)$, borne inférieure prouvée
+\end{itemize}
+
+\paragraph{Algorithmes quantiques :}
+\begin{itemize}
+    \item \textbf{Grover} trouve un élément marqué en $O(\sqrt{N})$ requêtes, asymptotiquement optimal
+    \item \textbf{Dürr-Høyer} trouve le minimum en $O(\sqrt{N})$ évaluations, généralisant Grover
+    \item Accélération \textbf{quadratique} : significative mais pas exponentielle
+    \item Le tri quantique reste $\Omega(n \log n)$ : pas d'avantage
+\end{itemize}
+
+\vfill
+
+\begin{center}
+\textit{« La nature n'est pas classique, que diable, et si vous voulez faire une simulation de la nature, vous feriez mieux de la faire quantique. »}
+
+\medskip
+
+--- Richard Feynman (1982)
+\end{center}
+
+\newpage
+
+% ===========================
+\appendix
+\section{Compléments mathématiques}
+
+\subsection{Démonstration de l'unitarité des portes de Pauli}
+
+\begin{proposition}
+Les matrices de Pauli $X$, $Y$, $Z$ sont unitaires et hermitiennes.
+\end{proposition}
+
+\begin{proof}
+Vérifions pour $X$ (les autres sont similaires) :
+\[
+X^\dagger X = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix} \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix} = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix} = I
+\]
+De plus, $X^\dagger = X$ (hermitienne).
+\end{proof}
+
+\subsection{Décomposition spectrale de Hadamard}
+
+La porte de Hadamard peut s'écrire en termes de ses vecteurs propres :
+
+\begin{proposition}
+Les vecteurs propres de $H$ sont $|+\rangle$ et $|-\rangle$ avec valeurs propres $+1$ et $-1$ :
+\[
+H = |+\rangle\langle +| - |-\rangle\langle -|
+\]
+\end{proposition}
+
+\begin{proof}
+Calculons :
+\[
+H|+\rangle = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix} \frac{1}{\sqrt{2}} \begin{pmatrix} 1 \\ 1 \end{pmatrix} = \frac{1}{2} \begin{pmatrix} 2 \\ 0 \end{pmatrix} = \begin{pmatrix} 1 \\ 0 \end{pmatrix} \times \frac{1}{\sqrt{2}} = |+\rangle
+\]
+De même, $H|-\rangle = -|-\rangle$.
+\end{proof}
+
+\subsection{Calcul explicite de l'opérateur de diffusion}
+
+\begin{proposition}
+Le diffuseur $U_s = 2|s\rangle\langle s| - I$ a pour matrice dans la base computationnelle (pour $n = 2$ qubits) :
+\[
+U_s = \frac{1}{2} \begin{pmatrix}
+-1 & 1 & 1 & 1 \\
+1 & -1 & 1 & 1 \\
+1 & 1 & -1 & 1 \\
+1 & 1 & 1 & -1
+\end{pmatrix}
+\]
+\end{proposition}
+
+\begin{proof}
+$|s\rangle = \frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle)$, donc :
+\[
+|s\rangle\langle s| = \frac{1}{4} \begin{pmatrix} 1 \\ 1 \\ 1 \\ 1 \end{pmatrix} (1 \; 1 \; 1 \; 1) = \frac{1}{4} \begin{pmatrix}
+1 & 1 & 1 & 1 \\
+1 & 1 & 1 & 1 \\
+1 & 1 & 1 & 1 \\
+1 & 1 & 1 & 1
+\end{pmatrix}
+\]
+Donc :
+\[
+U_s = 2 \times \frac{1}{4} \mathbf{J} - I = \frac{1}{2}\mathbf{J} - I
+\]
+où $\mathbf{J}$ est la matrice remplie de 1.
+\end{proof}
+
+\newpage
+
+% ===========================
+\begin{thebibliography}{99}
+
+\bibitem{cormen2009algorithms}
+Cormen, T. H., Leiserson, C. E., Rivest, R. L., \& Stein, C. (2009).
+\textit{Introduction to Algorithms} (3rd ed.).
+MIT Press.
+
+\bibitem{grover1996}
+Grover, L. K. (1996).
+A fast quantum mechanical algorithm for database search.
+\textit{Proceedings of the 28th Annual ACM Symposium on Theory of Computing (STOC)}, 212--219.
+
+\bibitem{durr1996}
+Dürr, C., \& Høyer, P. (1996).
+A quantum algorithm for finding the minimum.
+\textit{arXiv preprint quant-ph/9607014}.
+
+\bibitem{bennett1997}
+Bennett, C. H., Bernstein, E., Brassard, G., \& Vazirani, U. (1997).
+Strengths and weaknesses of quantum computing.
+\textit{SIAM Journal on Computing}, 26(5), 1510--1523.
+
+\bibitem{boyer1998}
+Boyer, M., Brassard, G., Høyer, P., \& Tapp, A. (1998).
+Tight bounds on quantum searching.
+\textit{Fortschritte der Physik}, 46(4-5), 493--505.
+
+\bibitem{hoyer2000quantum}
+Høyer, P., Neerbek, J., \& Shi, Y. (2002).
+Quantum complexities of ordered searching, sorting, and element distinctness.
+\textit{Algorithmica}, 34(4), 429--448.
+
+\bibitem{nielsen2010}
+Nielsen, M. A., \& Chuang, I. L. (2010).
+\textit{Quantum Computation and Quantum Information} (10th Anniversary ed.).
+Cambridge University Press.
+
+\bibitem{preskill2018}
+Preskill, J. (2018).
+Quantum computing in the NISQ era and beyond.
+\textit{Quantum}, 2, 79.
+
+\bibitem{shor1997}
+Shor, P. W. (1997).
+Polynomial-time algorithms for prime factorization and discrete logarithms on a quantum computer.
+\textit{SIAM Journal on Computing}, 26(5), 1484--1509.
+
+\bibitem{qiskit2024}
+Qiskit Development Team (2024).
+\textit{Qiskit: An Open-source Framework for Quantum Computing}.
+Retrieved from \url{https://qiskit.org}
+
+\end{thebibliography}
+
+\end{document}
